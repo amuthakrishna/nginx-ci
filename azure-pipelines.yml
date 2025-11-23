@@ -35,8 +35,7 @@ stages:
         echo "##vso[task.setvariable variable=IMAGE_TAG;isOutput=true]$TAG"
       displayName: 'Build & Push'
 
-    outputs:
-      IMAGE_TAG: $[ steps.DockerBuildPush.outputs['DockerBuildPush.IMAGE_TAG'] ]
+ 
 
 - stage: CodePush
   dependsOn: BuildPush
