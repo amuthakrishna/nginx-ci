@@ -7,7 +7,7 @@ pool:
 variables:
   - group: docker-hub-login
   - name: IMAGE_TAG
-    value: $(Build.BuildId)
+    value: $(Build.BuildId)-$(Date:dd-MM-yyyy)
 
 stages:
 - stage: DockerLogin
@@ -31,5 +31,5 @@ stages:
         docker build -t "$(IMAGE_NAME):$(IMAGE_TAG)" .
         echo "Pushing Docker image..."
         docker push "$(IMAGE_NAME):$(IMAGE_TAG)"
-      displayName: 'Build and Push Image'
+      displayName: 'Image Bush'
 
