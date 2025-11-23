@@ -6,6 +6,7 @@ pool:
 
 variables:
   - group: docker-hub-login
+  - group: github_token
 
 stages:
 - stage: DockerLogin
@@ -18,7 +19,6 @@ stages:
       displayName: 'Docker Login'
 
 - stage: BuildPush
-  displayName: Build and Push Docker Image
   dependsOn: DockerLogin
   jobs:
   - job: DockerBuildPush
@@ -29,34 +29,35 @@ stages:
 
         echo "Using Docker tag: $TAG"
 
-        echo "Building Docker image..."
         docker build -t "$(IMAGE_NAME):$TAG" .
-
-        echo "Pushing Docker image..."
         docker push "$(IMAGE_NAME):$TAG"
-      displayName: 'Image Pushed'
+
+        echo "##vso[task.setvariable variable=IMAGE_TAG;isOutput=true]$TAG"
+      displayName: 'Build & Push'
+
+    outputs:
+      IMAGE_TAG: $[ steps.DockerBuildPush.outputs['DockerBuildPush.IMAGE_TAG'] ]
 
 - stage: CodePush
-  displayName: "Update ArgoCD Repo"
   dependsOn: BuildPush
   jobs:
-    - job: PushToArgoCD
-      steps:
-        - checkout: self
+  - job: PushToArgoCD
+    steps:
+    - checkout: self
 
-        - script: |
-            echo "Cloning ArgoCD Repo..."
-            git clone https://$(GITHUB_TOKEN)@github.com/amuthakrishna/argocd.git argocd
+    - script: |
+        echo "Cloning ArgoCD Repo..."
+        git clone https://$GITHUB_TOKEN@github.com/amuthakrishna/argocd.git argocd
 
-            echo "Updating Deployment YAML..."
-            sed -i "s|image: .*|image: $(IMAGE_NAME):$(IMAGE_TAG)|" argocd/k8s/app-deployment.yaml
+        echo "Updating Deployment YAML..."
+        sed -i "s|image: .*|image: $(IMAGE_NAME):$(IMAGE_TAG)|" argocd/k8s/app-deployment.yaml
 
-            cd nginx-cd
+        cd argocd
 
-            git config --local user.email "amuthakrishna1988@gmail.com"
-            git config --local user.name "amuthakrishna"
+        git config --local user.email "amuthakrishna1988@gmail.com"
+        git config --local user.name "amuthakrishna"
 
-            git add .
-            git commit -m "Update image to: $(IMAGE_NAME):$(IMAGE_TAG)"
-            git push
-          displayName: "Commit Updated YAML to ArgoCD Repo"
+        git add .
+        git commit -m "Update image to: $(IMAGE_NAME):$(IMAGE_TAG)"
+        git push
+      displayName: 'Commit Updated YAML'
