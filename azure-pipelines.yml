@@ -7,12 +7,6 @@ pool:
 variables:
   - group: docker-hub-login
 
-  - name: BUILD_DATE
-    value: $[format('{0:dd-MM-yyyy}', pipeline.startTime)]
-
-  - name: IMAGE_TAG
-    value: $(Build.BuildId)-$(BUILD_DATE)
-
 stages:
 - stage: DockerLogin
   displayName: Docker Login
@@ -23,7 +17,6 @@ stages:
         echo "$(DOCKER_PASSWORD)" | docker login -u "$(DOCKER_USERNAME)" --password-stdin
       displayName: 'Docker Login'
 
-
 - stage: BuildPush
   displayName: Build and Push Docker Image
   dependsOn: DockerLogin
@@ -31,9 +24,14 @@ stages:
   - job: DockerBuildPush
     steps:
     - script: |
-        echo "Building Docker image..."
-        docker build -t "$(IMAGE_NAME):$(IMAGE_TAG)" .
-        echo "Pushing Docker image..."
-        docker push "$(IMAGE_NAME):$(IMAGE_TAG)"
-      displayName: 'Image Bush'
+        BUILD_DATE=$(date +'%d-%m-%Y')
+        TAG="$(Build.BuildId)-$BUILD_DATE"
 
+        echo "Using Docker tag: $TAG"
+
+        echo "Building Docker image..."
+        docker build -t "$(IMAGE_NAME):$TAG" .
+
+        echo "Pushing Docker image..."
+        docker push "$(IMAGE_NAME):$TAG"
+      displayName: 'Image Pushed'
