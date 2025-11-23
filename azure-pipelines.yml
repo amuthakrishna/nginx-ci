@@ -59,12 +59,12 @@ stages:
 
     - script: |
         echo "Cloning ArgoCD Repo..."
-        git clone https://$GITHUB_TOKEN@github.com/amuthakrishna/argocd.git argocd
+        git clone https://$GITHUB_TOKEN@github.com/amuthakrishna/nginx-cd.git nginx-cd
 
         echo "Updating Deployment YAML..."
-        sed -i "s|image: .*|image: $(IMAGE_NAME):$(IMAGE_TAG)|" argocd/k8s/app-deployment.yaml
+        sed -i "s|image: .*|image: $(IMAGE_NAME):$(IMAGE_TAG)|" nginx-cd/k8s/app-deployment.yaml
 
-        cd argocd
+        cd nginx-cd
 
         git config --local user.email "amuthakrishna1988@gmail.com"
         git config --local user.name "amuthakrishna"
