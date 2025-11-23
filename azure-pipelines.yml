@@ -1,19 +1,35 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
 - main
 
 pool:
-  vmImage: ubuntu-latest
+  name: Default
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+variables:
+  - group: docker-hub-login
+  - name: IMAGE_TAG
+    value: $(Build.BuildId)
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+stages:
+- stage: DockerLogin
+  displayName: Docker Login
+  jobs:
+  - job: DockerLogin
+    steps:
+    - script: |
+        echo "$(DOCKER_PASSWORD)" | docker login -u "$(DOCKER_USERNAME)" --password-stdin
+      displayName: 'Docker Login'
+
+
+- stage: BuildPush
+  displayName: Build and Push Docker Image
+  dependsOn: DockerLogin
+  jobs:
+  - job: DockerBuildPush
+    steps:
+    - script: |
+        echo "Building Docker image..."
+        docker build -t "$(IMAGE_NAME):$(IMAGE_TAG)" .
+        echo "Pushing Docker image..."
+        docker push "$(IMAGE_NAME):$(IMAGE_TAG)"
+      displayName: 'Build and Push Image'
+
