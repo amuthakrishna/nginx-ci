@@ -7,8 +7,11 @@ pool:
 variables:
   - group: docker-hub-login
   - group: github_token
+  - name: IMAGE_NAME
+    value: krishnamoorthy1/nginx-ci
 
 stages:
+# -------------------- DOCKER LOGIN --------------------
 - stage: DockerLogin
   displayName: Docker Login
   jobs:
@@ -18,6 +21,7 @@ stages:
         echo "$(DOCKER_PASSWORD)" | docker login -u "$(DOCKER_USERNAME)" --password-stdin
       displayName: 'Docker Login'
 
+# -------------------- BUILD & PUSH --------------------
 - stage: BuildPush
   dependsOn: DockerLogin
   jobs:
@@ -33,12 +37,20 @@ stages:
         docker push "$(IMAGE_NAME):$TAG"
 
         echo "##vso[task.setvariable variable=IMAGE_TAG;isOutput=true]$TAG"
+      name: SetTag     # REQUIRED
       displayName: 'Build & Push'
 
- 
+    outputs:           # REQUIRED
+      tagOutput.IMAGE_TAG: $[ steps.SetTag.outputs['IMAGE_TAG'] ]
 
+
+# -------------------- UPDATE ARGOCD REPO --------------------
 - stage: CodePush
   dependsOn: BuildPush
+
+  variables:          # REQUIRED
+    IMAGE_TAG: $[ stageDependencies.BuildPush.DockerBuildPush.outputs['tagOutput.IMAGE_TAG'] ]
+
   jobs:
   - job: PushToArgoCD
     steps:
