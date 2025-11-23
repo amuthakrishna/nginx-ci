@@ -45,30 +45,24 @@ stages:
 
 
 # -------------------- UPDATE ARGOCD REPO --------------------
-- stage: CodePush
-  dependsOn: BuildPush
-
-  variables:          # REQUIRED
-    IMAGE_TAG: $[ stageDependencies.BuildPush.DockerBuildPush.outputs['tagOutput.IMAGE_TAG'] ]
-
+- stage: BuildPush
+  dependsOn: DockerLogin
   jobs:
-  - job: PushToArgoCD
+  - job: DockerBuildPush
+
     steps:
-    - checkout: self
-
     - script: |
-        echo "Cloning ArgoCD Repo..."
-        git clone https://$GITHUB_TOKEN@github.com/amuthakrishna/argocd.git argocd
+        BUILD_DATE=$(date +'%d-%m-%Y')
+        TAG="$(Build.BuildId)-$BUILD_DATE"
 
-        echo "Updating Deployment YAML..."
-        sed -i "s|image: .*|image: $(IMAGE_NAME):$(IMAGE_TAG)|" argocd/k8s/app-deployment.yaml
+        echo "Using Docker tag: $TAG"
 
-        cd argocd
+        docker build -t "$(IMAGE_NAME):$TAG" .
+        docker push "$(IMAGE_NAME):$TAG"
 
-        git config --local user.email "amuthakrishna1988@gmail.com"
-        git config --local user.name "amuthakrishna"
+        echo "##vso[task.setvariable variable=IMAGE_TAG;isOutput=true]$TAG"
+      name: SetTag          # REQUIRED
+      displayName: 'Build & Push'
 
-        git add .
-        git commit -m "Update image to: $(IMAGE_NAME):$(IMAGE_TAG)"
-        git push
-      displayName: 'Commit Updated YAML'
+    outputs:                # MUST be at job level, not inside steps
+      tagOutput.IMAGE_TAG: $[ steps.SetTag.outputs['IMAGE_TAG'] ]
