@@ -13,7 +13,6 @@ variables:
 stages:
 # -------------------- DOCKER LOGIN --------------------
 - stage: DockerLogin
-  displayName: Docker Login
   jobs:
   - job: DockerLogin
     steps:
@@ -21,11 +20,13 @@ stages:
         echo "$(DOCKER_PASSWORD)" | docker login -u "$(DOCKER_USERNAME)" --password-stdin
       displayName: 'Docker Login'
 
+
 # -------------------- BUILD & PUSH --------------------
 - stage: BuildPush
   dependsOn: DockerLogin
   jobs:
   - job: DockerBuildPush
+
     steps:
     - script: |
         BUILD_DATE=$(date +'%d-%m-%Y')
@@ -37,32 +38,39 @@ stages:
         docker push "$(IMAGE_NAME):$TAG"
 
         echo "##vso[task.setvariable variable=IMAGE_TAG;isOutput=true]$TAG"
-      name: SetTag     # REQUIRED
+      name: SetTag
       displayName: 'Build & Push'
 
-    outputs:           # REQUIRED
+    outputs:
       tagOutput.IMAGE_TAG: $[ steps.SetTag.outputs['IMAGE_TAG'] ]
 
 
 # -------------------- UPDATE ARGOCD REPO --------------------
-- stage: BuildPush
-  dependsOn: DockerLogin
+- stage: CodePush
+  dependsOn: BuildPush
+
+  variables:
+    IMAGE_TAG: $[ stageDependencies.BuildPush.DockerBuildPush.outputs['tagOutput.IMAGE_TAG'] ]
+
   jobs:
-  - job: DockerBuildPush
+  - job: PushToArgoCD
 
     steps:
+    - checkout: self
+
     - script: |
-        BUILD_DATE=$(date +'%d-%m-%Y')
-        TAG="$(Build.BuildId)-$BUILD_DATE"
+        echo "Cloning ArgoCD Repo..."
+        git clone https://$GITHUB_TOKEN@github.com/amuthakrishna/argocd.git argocd
 
-        echo "Using Docker tag: $TAG"
+        echo "Updating Deployment YAML..."
+        sed -i "s|image: .*|image: $(IMAGE_NAME):$(IMAGE_TAG)|" argocd/k8s/app-deployment.yaml
 
-        docker build -t "$(IMAGE_NAME):$TAG" .
-        docker push "$(IMAGE_NAME):$TAG"
+        cd argocd
 
-        echo "##vso[task.setvariable variable=IMAGE_TAG;isOutput=true]$TAG"
-      name: SetTag          # REQUIRED
-      displayName: 'Build & Push'
+        git config --local user.email "amuthakrishna1988@gmail.com"
+        git config --local user.name "amuthakrishna"
 
-    outputs:                # MUST be at job level, not inside steps
-      tagOutput.IMAGE_TAG: $[ steps.SetTag.outputs['IMAGE_TAG'] ]
+        git add .
+        git commit -m "Update image to: $(IMAGE_NAME):$(IMAGE_TAG)"
+        git push
+      displayName: "Commit Updated YAML"
