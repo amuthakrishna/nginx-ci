@@ -49,15 +49,16 @@ stages:
   dependsOn: BuildPush
 
   variables:
-    IMAGE_TAG: $[ stageDependencies.BuildPush.DockerBuildPush.outputs['tagOutput.IMAGE_TAG'] ]
+    IMAGE_TAG: $[ stageDependencies.BuildPush.DockerBuildPush.outputs['SetTag.IMAGE_TAG'] ]
 
   jobs:
   - job: PushToArgoCD
-
     steps:
     - checkout: self
 
     - script: |
+        echo "Using IMAGE_TAG = $(IMAGE_TAG)"
+
         echo "Cloning ArgoCD Repo..."
         git clone https://$GITHUB_TOKEN@github.com/amuthakrishna/nginx-cd.git nginx-cd
 
