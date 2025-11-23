@@ -6,8 +6,12 @@ pool:
 
 variables:
   - group: docker-hub-login
+
+  - name: BUILD_DATE
+    value: $[format('{0:dd-MM-yyyy}', pipeline.startTime)]
+
   - name: IMAGE_TAG
-    value: $(Build.BuildId)-$(Date:dd-MM-yyyy)
+    value: $(Build.BuildId)-$(BUILD_DATE)
 
 stages:
 - stage: DockerLogin
