@@ -41,8 +41,7 @@ stages:
       name: SetTag
       displayName: 'Build & Push'
 
-    outputs:
-      tagOutput.IMAGE_TAG: $[ steps.SetTag.outputs['IMAGE_TAG'] ]
+
 
 
 # -------------------- UPDATE ARGOCD REPO --------------------
